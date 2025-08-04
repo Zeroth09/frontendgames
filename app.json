@@ -42,8 +42,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-location",
-      "expo-bluetooth"
+      "expo-location"
     ]
   }
 } 
