@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProximityScanner from './src/components/ProximityScanner';
-import BattleScreen from './src/components/BattleScreen';
 import { DeviceInfo } from './src/services/ProximityService';
 import { BattleState, BattlePlayer } from './src/services/BattleService';
 import BattleService from './src/services/BattleService';
@@ -162,10 +161,12 @@ export default function App() {
             <Text style={styles.modalTitle}>⚔️ Battle Arena</Text>
           </View>
           
-          <BattleScreen 
-            battle={currentBattle} 
-            onBattleEnd={handleBattleEnd}
-          />
+          <View style={styles.battleContent}>
+            <Text style={styles.battleText}>Battle sedang berlangsung...</Text>
+            <Text style={styles.battleStatus}>
+              Status: {currentBattle.status}
+            </Text>
+          </View>
         </SafeAreaView>
       </Modal>
     );
@@ -231,5 +232,20 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     flex: 1,
     textAlign: 'center',
+  },
+  battleContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  battleText: {
+    fontSize: 18,
+    color: '#f8fafc',
+    marginBottom: 10,
+  },
+  battleStatus: {
+    fontSize: 14,
+    color: '#94a3b8',
   },
 }); 
