@@ -5,6 +5,8 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [currentBattle, setCurrentBattle] = useState(null);
   const [battleResult, setBattleResult] = useState(null);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanMethod, setScanMethod] = useState('wifi');
 
   // Bank pertanyaan battle
   const questions = [
@@ -50,26 +52,103 @@ export default function App() {
     }
   ];
 
-  const startScanning = () => {
+  // Simulasi scan WiFi dan Bluetooth yang realistis
+  const scanForDevices = async () => {
+    const detectedDevices = [];
+    
+    // Simulasi scan WiFi hotspots
+    if (scanMethod === 'wifi') {
+      const wifiDevices = await simulateWiFiScan();
+      detectedDevices.push(...wifiDevices);
+    }
+    
+    // Simulasi scan Bluetooth devices
+    if (scanMethod === 'bluetooth') {
+      const bluetoothDevices = await simulateBluetoothScan();
+      detectedDevices.push(...bluetoothDevices);
+    }
+    
+    // Simulasi scan gabungan
+    if (scanMethod === 'combined') {
+      const wifiDevices = await simulateWiFiScan();
+      const bluetoothDevices = await simulateBluetoothScan();
+      detectedDevices.push(...wifiDevices, ...bluetoothDevices);
+    }
+    
+    return detectedDevices;
+  };
+
+  const simulateWiFiScan = () => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulasi deteksi hotspot WiFi dengan signal strength untuk kalkulasi jarak
+        const randomDevices = Math.random() < 0.3 ? [ // 30% chance ada device
+          {
+            id: 'wifi_' + Date.now(),
+            name: 'WiFi Player ' + Math.floor(Math.random() * 100),
+            distance: parseFloat((Math.random() * 2.5).toFixed(1)), // 0-2.5m
+            signalStrength: -30 - Math.random() * 50, // -30 to -80 dBm
+            method: 'WiFi Hotspot'
+          }
+        ] : [];
+        resolve(randomDevices);
+      }, 1000);
+    });
+  };
+
+  const simulateBluetoothScan = () => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulasi deteksi Bluetooth devices dengan RSSI untuk kalkulasi jarak
+        const randomDevices = Math.random() < 0.4 ? [ // 40% chance ada device
+          {
+            id: 'bt_' + Date.now(),
+            name: 'BT Player ' + Math.floor(Math.random() * 100),
+            distance: parseFloat((Math.random() * 2.0).toFixed(1)), // 0-2.0m
+            signalStrength: -40 - Math.random() * 40, // -40 to -80 dBm
+            method: 'Bluetooth LE'
+          }
+        ] : [];
+        resolve(randomDevices);
+      }, 1500);
+    });
+  };
+
+  const startScanning = async () => {
     setIsScanning(true);
-    // Simulate device detection for web dengan jarak ±1 meter
-    setTimeout(() => {
-      const nearbyDevices = [
-        { id: '1', name: 'Player Alpha', distance: 0.7 },
-        { id: '2', name: 'Player Beta', distance: 0.9 },
-        { id: '3', name: 'Player Gamma', distance: 1.1 }
-      ];
+    setScanProgress(0);
+    setDevices([]);
+    
+    // Progress animation
+    const progressInterval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 100);
+    
+    try {
+      // Scan untuk devices
+      const detectedDevices = await scanForDevices();
       
-      setDevices(nearbyDevices);
+      setDevices(detectedDevices);
       
-      // Auto-start battle dengan device terdekat dalam radius 1 meter
-      const closeDevice = nearbyDevices.find(device => device.distance <= 1.0);
-      if (closeDevice) {
+      // Auto-start battle HANYA jika ada device dalam radius 1 meter
+      const closeDevice = detectedDevices.find(device => device.distance <= 1.0);
+      if (closeDevice && detectedDevices.length > 0) {
         setTimeout(() => {
           startBattle(closeDevice);
         }, 1000);
       }
-    }, 2000);
+    } catch (error) {
+      console.error('Scan error:', error);
+    }
+    
+    clearInterval(progressInterval);
+    setScanProgress(100);
   };
 
   const stopScanning = () => {
@@ -188,9 +267,35 @@ export default function App() {
 
       <div style={styles.content}>
         <div style={styles.controls}>
+          {!isScanning && (
+            <div style={styles.scanMethodSelector}>
+              <p style={styles.methodLabel}>Pilih Metode Scan:</p>
+              <div style={styles.methodButtons}>
+                <button 
+                  style={scanMethod === 'wifi' ? styles.methodButtonActive : styles.methodButton}
+                  onClick={() => setScanMethod('wifi')}
+                >
+                  📶 WiFi Hotspot
+                </button>
+                <button 
+                  style={scanMethod === 'bluetooth' ? styles.methodButtonActive : styles.methodButton}
+                  onClick={() => setScanMethod('bluetooth')}
+                >
+                  🔵 Bluetooth LE
+                </button>
+                <button 
+                  style={scanMethod === 'combined' ? styles.methodButtonActive : styles.methodButton}
+                  onClick={() => setScanMethod('combined')}
+                >
+                  🌐 WiFi + BT
+                </button>
+              </div>
+            </div>
+          )}
+          
           {!isScanning ? (
             <button style={styles.button} onClick={startScanning}>
-              🔍 Scan Players (Radius 1m)
+              🔍 Scan Players ({scanMethod === 'wifi' ? 'WiFi' : scanMethod === 'bluetooth' ? 'Bluetooth' : 'Combined'})
             </button>
           ) : (
             <button style={styles.buttonStop} onClick={stopScanning}>
@@ -201,8 +306,21 @@ export default function App() {
 
         {isScanning && (
           <div style={styles.scanning}>
-            <p style={styles.scanText}>🔄 Scanning players dalam radius 1 meter...</p>
-            <p style={styles.autoText}>⚡ Auto-battle saat player terdeteksi!</p>
+            <p style={styles.scanText}>
+              🔄 Scanning {scanMethod === 'wifi' ? 'WiFi Hotspots' : scanMethod === 'bluetooth' ? 'Bluetooth Devices' : 'WiFi + Bluetooth'}...
+            </p>
+            <div style={styles.progressContainer}>
+              <div style={styles.progressBar}>
+                <div style={{...styles.progressFill, width: `${scanProgress}%`}}></div>
+              </div>
+              <span style={styles.progressText}>{scanProgress}%</span>
+            </div>
+            <p style={styles.autoText}>⚡ Auto-battle saat player dalam radius 1m terdeteksi!</p>
+            <p style={styles.methodInfo}>
+              {scanMethod === 'wifi' && '📶 Menggunakan signal strength WiFi untuk kalkulasi jarak'}
+              {scanMethod === 'bluetooth' && '🔵 Menggunakan RSSI Bluetooth untuk deteksi proximity'}
+              {scanMethod === 'combined' && '🌐 Scanning WiFi + Bluetooth untuk akurasi maksimal'}
+            </p>
           </div>
         )}
 
@@ -215,6 +333,9 @@ export default function App() {
                   <h4 style={styles.deviceName}>{device.name}</h4>
                   <p style={styles.deviceDistance}>
                     📍 Jarak: {device.distance}m {device.distance <= 1.0 ? '🎯' : '❌'}
+                  </p>
+                  <p style={styles.deviceMethod}>
+                    {device.method} | Signal: {device.signalStrength}dBm
                   </p>
                 </div>
                 {device.distance <= 1.0 && (
@@ -463,5 +584,78 @@ const styles = {
     borderRadius: '20px',
     fontSize: '14px',
     fontWeight: 'bold',
+  },
+  // Scan Method Styles
+  scanMethodSelector: {
+    marginBottom: '20px',
+    textAlign: 'center',
+  },
+  methodLabel: {
+    margin: '0 0 10px 0',
+    color: '#64748b',
+    fontSize: '14px',
+  },
+  methodButtons: {
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  methodButton: {
+    backgroundColor: '#f8fafc',
+    border: '2px solid #e2e8f0',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    transition: 'all 0.3s ease',
+  },
+  methodButtonActive: {
+    backgroundColor: '#6366f1',
+    border: '2px solid #6366f1',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    transition: 'all 0.3s ease',
+  },
+  // Progress Bar Styles
+  progressContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    margin: '15px 0',
+  },
+  progressBar: {
+    flex: '1',
+    height: '8px',
+    backgroundColor: '#e2e8f0',
+    borderRadius: '4px',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#6366f1',
+    transition: 'width 0.3s ease',
+  },
+  progressText: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#6366f1',
+    minWidth: '40px',
+  },
+  methodInfo: {
+    fontSize: '12px',
+    color: '#6366f1',
+    fontStyle: 'italic',
+    margin: '10px 0 0 0',
+  },
+  deviceMethod: {
+    fontSize: '12px',
+    color: '#94a3b8',
+    margin: '4px 0 0 0',
   },
 }; 
