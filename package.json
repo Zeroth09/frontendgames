@@ -11,6 +11,7 @@
     "web": "expo start --web",
     "build": "npx expo export:web",
     "build:web": "npx expo export:web",
+    "vercel-build": "npx expo export:web",
     "eject": "expo eject"
   },
   "dependencies": {
