@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Sistem deteksi proximity untuk battle antar devices",
   "main": "index.js",
+  "entry": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
